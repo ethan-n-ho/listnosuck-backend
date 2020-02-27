@@ -50,6 +50,16 @@ app.get("/", (request, response) => {
   response.sendFile(`${__dirname}/views/index.html`);
 });
 
+// endpoint to take action based on parsed request.body.text
+app.get("/takeAction", (request, response) => {
+  // console.log(``)
+  const cleansedItem = cleanseString(request.body.text);
+  // TODO: feed to action parser
+  const obj = parseAction(cleansedItem)
+  // TODO: case action based on parser resp defined in JSON schema
+  response.send(JSON.stringify(obj));
+});
+
 // endpoint to get all the items in the list
 app.get("/getList", (request, response) => {
   db.all("SELECT * from List", (err, rows) => {
@@ -111,7 +121,14 @@ const cleanseString = function(string) {
 
 // parses request.body.text into JSON object
 const parseAction = function(string) {
-  return string.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // split by whitespace
+  const l = string.split(/\s+/)
+  // TODO: schema validation with ajv
+  // for now, static schema
+  return {
+    "action": l[0],
+    "params": l.slice(1)
+  };
 };
 
 // listen for requests :)
