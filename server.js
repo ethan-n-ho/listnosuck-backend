@@ -51,8 +51,7 @@ app.get("/", (request, response) => {
 });
 
 // endpoint to take action based on parsed request.body.text
-app.get("/takeAction", (request, response) => {
-  // console.log(``)
+app.post("/takeAction", (request, response) => {
   const cleansedItem = cleanseString(request.body.text);
   // TODO: feed to action parser
   const obj = parseAction(cleansedItem)
