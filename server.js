@@ -92,6 +92,15 @@ class PostExecutor {
     };
   }
   
+  // takes JSON data like [{"item": null}, {"item": null}, {"item": null}, etc.]
+  static toNumList(data) {
+    var text = "";
+    for (let step = 0; step < data.length; step++) {
+      text += `\n${step + 1}. ${data[step].item}`
+    }
+    return text;
+  }
+  
   /*
    * SQL Methods
    */
@@ -122,7 +131,7 @@ class PostExecutor {
   listItems() {
     var self = this;
     db.all("SELECT * from List", (err, rows) => {
-      self.response.send(self.blockResp(rows));
+      self.response.send(self.blockResp(PostExecutor.toNumList(rows)));
     });
   }
   
@@ -200,31 +209,24 @@ class PostExecutor {
     return this.formatResp("success", `successful ${this.action} on ${this.targets.join(", ")}`);
   }
   
+  // generic generator
+  formatResp(status, msg) {
+    return { status: status, message: msg, action: this.action, targets: this.targets};
+  }
+  
   // must deliver payload within 3000 ms to avoid client side (Slack app) timeout
-  blockResp(data) {
+  blockResp(text) {
     return {
       "blocks": [
         {
           "type": "section",
           "text": {
               "type": "mrkdwn",
-              "text": JSON.stringify(data)
+              "text": text
           }
         }
-        // {
-        //   "type": "section",
-        //   "text": {
-        //       "type": "mrkdwn",
-        //       "text": "Partly cloudy today and tomorrow"
-        //   }
-        // }
       ]
     };
-  }
-  
-  // generic generator
-  formatResp(status, msg) {
-    return { status: status, message: msg, action: this.action, targets: this.targets};
   }
   
   /*
