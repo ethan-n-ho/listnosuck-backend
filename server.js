@@ -1,5 +1,4 @@
 // server.js
-// where your node app starts
 
 // init project
 const express = require("express");
@@ -8,9 +7,6 @@ const app = express();
 const fs = require("fs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-
-// we've started you off with Express,
-// but feel free to use whatever libs or frameworks you'd like through `package.json`.
 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static("public"));
@@ -39,53 +35,137 @@ db.serialize(() => {
     console.log('Database "List" ready to go!');
     db.each("SELECT * from List", (err, row) => {
       if (row) {
-        console.log(`record: ${row.list}`);
+        console.log(`record: ${row.item}`);
       }
     });
   }
 });
 
-// http://expressjs.com/en/starter/basic-routing.html
-app.get("/", (request, response) => {
-  response.sendFile(`${__dirname}/views/index.html`);
-});
-
-// endpoint to get all the items in the list
-app.get("/getList", (request, response) => {
-  db.all("SELECT * from List", (err, rows) => {
-    response.send(JSON.stringify(rows));
-  });
-});
-
-// endpoint to add a dream to the database
-app.post("/addItem", (request, response) => {
-  console.log(`add to list ${request.body.text}`);
+// main logic handler for POST request data
+// TODO: authenticate token against env
+class PostExecutor {
+  constructor(raw_msg, response) {
+    this.raw_msg = raw_msg;
+    this.targets = [];
+    this.response = response;
+  }
   
-  // DISALLOW_WRITE is an ENV variable that gets reset for new projects
-  // so they can write to the database
-  if (!process.env.DISALLOW_WRITE) {
-    const cleansedItem = cleanseString(request.body.text);
-    if (cleansedItem == "") {
-      response.send({ message: "error: null text" });
+  /*
+   * Token auth
+   */
+  
+  
+  
+  /*
+   * Getters
+   */
+  
+  // returns parsed request
+  get msg() {
+    return PostExecutor.parseAction(this.raw_msg);
+  }
+  
+  // action getter
+  get action() {
+    return this.msg.action;
+  }
+  
+  // params getter
+  get params() {
+    return this.msg.params;
+  }
+  
+  /*
+   * Utils
+   */
+  
+  // parses request.body.text into JSON object
+  static parseAction(string) {
+    // split by whitespace
+    const l = string.split(/\s+/);
+    // TODO: schema validation with ajv
+    // TODO: bash style flags e.g. case sensitivity
+    // for now, static schema
+    return {
+      "action": l[0],
+      "params": l.slice(1)
+    };
+  }
+  
+  // takes JSON data like [{"item": null}, {"item": null}, {"item": null}, etc.]
+  static toNumList(data) {
+    var text = "";
+    for (let step = 0; step < data.length; step++) {
+      text += `\n${step + 1}. ${data[step].item}`
+    }
+    return text;
+  }
+  
+  /*
+   * SQL Methods
+   */
+  
+  // Method
+  calcArea() {
+    return this.height * this.width;
+  }
+  
+  // generic SQL handler
+  runsql(query, arg) {
+    var self = this;
+    console.log(query);
+    if (process.env.DISALLOW_WRITE) {
+      this.error("DISALLOW_WRITE == true");
     } else {
-      db.run(`INSERT INTO List (item) VALUES (?)`, cleansedItem, error => {
+      db.run(query, arg, error => {
         if (error) {
-          response.send({ message: "error: unknown error" });
+          self.error(error);
         } else {
-          response.send({ message: "success" });
+          self.success();
         }
       });
     }
   }
-});
-
-// endpoint to clear dreams from the database
-app.get("/clear", (request, response) => {
-  // DISALLOW_WRITE is an ENV variable that gets reset for new projects so you can write to the database
-  if (!process.env.DISALLOW_WRITE) {
-    db.each(
-      "SELECT * from List",
-      (err, row) => {
+  
+  // adds array list of items to the list
+  listItems() {
+    var self = this;
+    db.all("SELECT * from List", (err, rows) => {
+      self.response.send(self.blockResp(PostExecutor.toNumList(rows)));
+    });
+  }
+  
+  // adds array list of items to the list
+  addItems(items) {
+    this.targets = items;
+    var mapped = items.map((item) => "(?)").join(",")
+    var sql = `INSERT INTO List (item) VALUES ` + mapped;
+    this.runsql(sql, items);
+  }
+  
+  // adds array list of items to the list
+  removeItems(items, sense_case = false) {
+    this.targets = items;
+    var filter;
+    if (sense_case) {
+      filter = "TRIM(item) LIKE (?)";
+    } else {
+      filter = "TRIM(UPPER(item)) LIKE (?)";
+      items = items.map((item) => item.toUpperCase());
+    }
+    var mapped = items.map((item) => filter).join(" OR ")
+    var sql = `DELETE FROM List WHERE ` + mapped;
+    this.runsql(sql, items);
+  }
+  
+  // remove all rows indexed by their own IDs
+  clearItems() {
+    var self = this;
+    this.targets = [];
+    if (process.env.DISALLOW_WRITE) {
+      this.error("DISALLOW_WRITE == true");
+    } else {
+      db.each("SELECT * from List", (err, row) => {
         console.log("row", row);
         db.run(`DELETE FROM List WHERE ID=?`, row.id, error => {
           if (row) {
@@ -95,22 +175,116 @@ app.get("/clear", (request, response) => {
       },
       err => {
         if (err) {
-          response.send({ message: "error" });
+          self.error(err);
         } else {
-          response.send({ message: "success" });
+          self.success();
         }
-      }
-    );
+      });
+    }
   }
+  
+  /*
+   * Response macros
+   */
+  
+  success() {
+    this.response.send(this.successResp());
+  }
+  
+  error(err) {
+    this.response.send(this.errorResp(err));
+  }
+  
+  /*
+   * Response generators
+   */
+  
+  // error response
+  errorResp(err) {
+    return this.formatResp("error", err);
+  }
+  
+  // successful response for single or multiple targets
+  successResp() {
+    return this.formatResp("success", `successful ${this.action} on ${this.targets.join(", ")}`);
+  }
+  
+  // generic generator
+  formatResp(status, msg) {
+    return { status: status, message: msg, action: this.action, targets: this.targets};
+  }
+  
+  // must deliver payload within 3000 ms to avoid client side (Slack app) timeout
+  blockResp(text) {
+    return {
+      "blocks": [
+        {
+          "type": "section",
+          "text": {
+              "type": "mrkdwn",
+              "text": text
+          }
+        }
+      ]
+    };
+  }
+  
+  /*
+   * Misc Methods
+   */
+  
+  // main executor
+  takeAction() {
+    switch (this.action) {
+      case 'ls':
+      case 'list':
+        this.listItems();
+        break;
+      case 'new':
+      case 'create':
+      case 'add':
+        this.addItems(this.params);
+        break;
+      case 'delete':
+      case 'rm':
+      case 'remove':
+        this.removeItems(this.params);
+        break;
+      case 'nuke':
+      case 'clear':
+        this.clearItems();
+        break;
+      case 'test':
+        this.response.send(this.blockResp({butt: "foo"}));
+        break;
+      default:
+        return this.errorResp(`${this.action} is not a valid command`);
+        break;
+    }
+  }
+}
+
+// http://expressjs.com/en/starter/basic-routing.html
+app.get("/", (request, response) => {
+  response.sendFile(`${__dirname}/views/index.html`);
+});
+
+// endpoint to take action based on parsed request.body.text
+app.post("/takeAction", (request, response) => {
+  const cleansedMsg = cleanseString(request.body.text);
+  const executor = new PostExecutor(cleansedMsg, response);
+  executor.takeAction();
+});
+
+// endpoint to get all the items in the list
+app.get("/getList", (request, response) => {
+  db.all("SELECT * from List", (err, rows) => {
+    response.send(JSON.stringify(rows));
+  });
 });
 
 // helper function that prevents html/css/script malice
 const cleanseString = function(string) {
-  return string.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-};
-
-// parses request.body.text into JSON object
-const parseAction = function(string) {
   return string.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 };
 
