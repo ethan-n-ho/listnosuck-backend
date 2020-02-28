@@ -5,6 +5,7 @@
     - Item timestamps
   - `/list` defaults to `ls` endpoint
     - `this.params === []`
+  - authentication
   - `@user [ action ] [ item ]` notifications
   - help page
   - help dev page
