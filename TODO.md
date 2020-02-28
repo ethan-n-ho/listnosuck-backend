@@ -1,8 +1,10 @@
 # To-Do
 
 - Features
+  - `/list 'multi word items'`
   - `done | finished` endpoint => strikethrough and eventual removal
     - Item timestamps
+  - `search | filter` endpoint
   - `/list` defaults to `ls` endpoint
     - `this.params === []`
   - authentication
@@ -12,6 +14,7 @@
   - @user assignments
   - parser reads bash-style flags
     - broadcast command to channel
+    - case sensitivity
   - remove by number in list
     - SELECT nth row
   - compelling app icon
