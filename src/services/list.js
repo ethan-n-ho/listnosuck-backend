@@ -58,7 +58,6 @@ ListService.prototype.toNumList = function toNumList(data) {
 ListService.prototype.listItems = function listItems() {
   var db_resp = this.dbs.listItems();
   console.log("db_resp:")
-  console.log(db_resp);
   return this.blockResp(this.toNumList(db_resp));
   // self.response.send(self.blockResp(PostExecutor.toNumList(rows)));
 }

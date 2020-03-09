@@ -1,4 +1,4 @@
-const Promise = require('../bluebird.js')
+const Promise = require('bluebird')
 
 // constructor
 function DBService() {
