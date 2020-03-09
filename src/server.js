@@ -11,7 +11,7 @@ route.use(bodyParser.json());
 route.use(express.static("public"));
 
 // init sqlite db
-const dbFile = "./.data/sqlite-list.db";
+const dbFile = "/data/sqlite-list.db";
 const exists = fs.existsSync(dbFile);
 const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database(dbFile);
@@ -23,7 +23,7 @@ db.serialize(() => {
       "CREATE TABLE List (id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT)"
     );
     console.log("New table List created!");
-    
+
     // insert default dreams
     db.serialize(() => {
       db.run(
@@ -46,13 +46,14 @@ db.serialize(() => {
 
 // http://expressjs.com/en/starter/basic-routing.html
 route.get("/", (request, response) => {
-  response.sendFile(`${__dirname}/views/index.html`);
+    response.send(JSON.stringify({}));
 });
 
 // endpoint to take action based on parsed request.body.text
 route.post(
   "/takeAction",
   async (req, res) => {
+      console.log(req.body.text);
     const cleansedMsg = cleanseString(req.body.text);
     // const executor = new PostExecutor(cleansedMsg, res);
     // executor.takeAction();
