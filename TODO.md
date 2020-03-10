@@ -1,8 +1,7 @@
 # To-Do
 
-- Example RESTful
-  - https://github.com/dinyangetoh/resthub2
-  - https://medium.com/@dinyangetoh/how-to-build-simple-restful-api-with-nodejs-expressjs-and-mongodb-99348012925d
+- Do this
+  - https://stackabuse.com/a-sqlite-tutorial-with-node-js/
 - Features
   - `/list 'multi word items'`
   - `done | finished` endpoint => strikethrough and eventual removal

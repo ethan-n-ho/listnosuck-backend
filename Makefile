@@ -34,7 +34,13 @@ git:
 # Build/test
 ####################################
 
-image: Dockerfile | docker
+.env:
+	if [ ! -f $* ]; then \
+		@echo "Touching file $@"
+		echo "PORT=3000" > $@
+	fi
+
+image: Dockerfile .env | docker
 	docker build --rm -t $(IMAGE) -f $< .
 
 shell: image | docker
