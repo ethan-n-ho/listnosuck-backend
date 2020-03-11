@@ -1,11 +1,11 @@
 // import ItemModel from "../models/item";
-const dbs_constructor = require("./sql.js");
+const daoConstructor = require("./dao.js");
 
-function ListService(raw_msg, response) {
+function ListController(raw_msg, response, dbFile="/data/sqlite.db") {
   this.raw_msg = raw_msg;
   this.targets = [];
   this.response = response;
-  this.dbs = new dbs_constructor();
+  this.dao = new daoConstructor(dbFile);
   // this.formatter = formatter;
 }
 
@@ -14,17 +14,17 @@ function ListService(raw_msg, response) {
  */
 
 // returns parsed request
-ListService.prototype.msg = function msg() {
+ListController.prototype.msg = function msg() {
   return this.parseAction(this.raw_msg);
 }
 
 // action getter
-ListService.prototype.action = function action() {
+ListController.prototype.action = function action() {
   return this.msg().action;
 }
 
 // params getter
-ListService.prototype.params = function params() {
+ListController.prototype.params = function params() {
   return this.msg().params;
 }
 
@@ -33,7 +33,7 @@ ListService.prototype.params = function params() {
  */
 
 // parses request.body.text into JSON object
-ListService.prototype.parseAction = function parseAction(string) {
+ListController.prototype.parseAction = function parseAction(string) {
   // split by whitespace
   const l = string.split(/\s+/);
   // TODO: schema validation with ajv
@@ -46,7 +46,7 @@ ListService.prototype.parseAction = function parseAction(string) {
 }
 
 // takes JSON data like [{"item": null}, {"item": null}, {"item": null}, etc.]
-ListService.prototype.toNumList = function toNumList(data) {
+ListController.prototype.toNumList = function toNumList(data) {
   var text = "";
   for (let step = 0; step < data.length; step++) {
     text += `\n${step + 1}. ${data[step].item}`
@@ -55,8 +55,8 @@ ListService.prototype.toNumList = function toNumList(data) {
 }
 
 // adds array list of items to the list
-ListService.prototype.listItems = function listItems() {
-  var db_resp = this.dbs.listItems();
+ListController.prototype.listItems = function listItems() {
+  var db_resp = this.dao.listItems();
   console.log("db_resp:")
   return this.blockResp(this.toNumList(db_resp));
   // self.response.send(self.blockResp(PostExecutor.toNumList(rows)));
@@ -66,11 +66,11 @@ ListService.prototype.listItems = function listItems() {
  * Response macros
  */
 
-ListService.prototype.success = function success() {
+ListController.prototype.success = function success() {
   return this.successResp();
 }
 
-ListService.prototype.error = function error(err) {
+ListController.prototype.error = function error(err) {
   return this.errorResp(err);
 }
 
@@ -79,22 +79,22 @@ ListService.prototype.error = function error(err) {
  */
 
 // error response
-ListService.prototype.errorResp = function errorResp(err) {
+ListController.prototype.errorResp = function errorResp(err) {
   return this.formatResp("error", err);
 }
 
 // successful response for single or multiple targets
-ListService.prototype.successResp = function successResp() {
+ListController.prototype.successResp = function successResp() {
   return this.formatResp("success", `successful ${this.action()} on ${this.targets.join(", ")}`);
 }
 
 // generic generator
-ListService.prototype.formatResp = function formatResp(status, msg) {
+ListController.prototype.formatResp = function formatResp(status, msg) {
   return { status: status, message: msg, action: this.action(), targets: this.targets};
 }
 
 // must deliver payload within 3000 ms to avoid client side (Slack app) timeout
-ListService.prototype.blockResp = function blockResp(text) {
+ListController.prototype.blockResp = function blockResp(text) {
   return {
     "blocks": [
       {
@@ -113,7 +113,7 @@ ListService.prototype.blockResp = function blockResp(text) {
  */
 
 // main executor
-ListService.prototype.takeAction = function takeAction() {
+ListController.prototype.takeAction = function takeAction() {
   switch (this.action()) {
     case '':
     case 'ls':
@@ -144,4 +144,4 @@ ListService.prototype.takeAction = function takeAction() {
 }
 
 //
-module.exports = ListService;
+module.exports = ListController;
