@@ -5,7 +5,7 @@ const sqlite3 = require('sqlite3')
 const Promise = require('bluebird')
 
 class AppDAO {
-    constructor(dbFile=process.env.DB_FILE) {
+    constructor(dbFile) {
         this.db_exists = fs.existsSync(dbFile);
         this.db = new sqlite3.Database(dbFile, (err) => {
             if (err) {

@@ -6,7 +6,7 @@ function ListController(raw_msg, response) {
     this.raw_msg = utils.cleanseString(raw_msg);
     this.targets = [];
     this.response = response;
-    this.dao = new daoConstructor();
+    this.dao = new daoConstructor(process.env.DB_FILE);
 }
 
 /*

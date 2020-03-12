@@ -9,7 +9,7 @@ router.get("/", (req, res) => {
 router.route("/takeAction").post(function (req, res) {
     var uncleaned = req.body.text;
     console.log(`Received request with body.text: ${uncleaned}`);
-    var ls = new listController(uncleaned, res);d
+    var ls = new listController(uncleaned, res);
     ls.takeAction();
 });
 
