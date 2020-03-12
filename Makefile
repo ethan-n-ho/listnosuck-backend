@@ -3,6 +3,7 @@ IMAGE_NAME=listnosuck-backend
 IMAGE_TAG=test
 GITREF=$(shell git rev-parse --short HEAD)
 IMAGE=$(DOCKERHUB_ORG)/$(IMAGE_NAME):$(IMAGE_TAG)
+DOT_ENV=./.env
 
 ####################################
 # Sanity checks
@@ -44,10 +45,13 @@ image: Dockerfile .env | docker
 	docker build --rm -t $(IMAGE) -f $< .
 
 shell: image | docker
-	docker run --rm -it -p 3000:3000 $(IMAGE) bash
+	docker run --rm -it -p 3000:3000 \
+		--env-file $(DOT_ENV) $(IMAGE) bash
 
 node: image | docker
-	docker run --rm -it --init -p 3000:3000 --env-file .env $(IMAGE) node src/server.js
+	docker run --rm -it --init -p 3000:3000 \
+		--env-file $(DOT_ENV) $(IMAGE) node src/server.js
 
 node-hello: image | docker
-	docker run --rm -it --init -p 3000:3000 --env-file .env $(IMAGE) node tests/hello.js
+	docker run --rm -it --init -p 3000:3000 \
+		--env-file $(DOT_ENV) $(IMAGE) node tests/hello.js
