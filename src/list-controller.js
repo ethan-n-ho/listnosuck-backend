@@ -1,12 +1,12 @@
-// import ItemModel from "../models/item";
 const daoConstructor = require("./dao.js");
+const resp_formats = require("./resp-formats.js");
+const utils = require("./utils");
 
-function ListController(raw_msg, response, dbFile="/data/sqlite.db") {
-  this.raw_msg = raw_msg;
-  this.targets = [];
-  this.response = response;
-  this.dao = new daoConstructor(dbFile);
-  // this.formatter = formatter;
+function ListController(raw_msg, response) {
+    this.raw_msg = utils.cleanseString(raw_msg);
+    this.targets = [];
+    this.response = response;
+    this.dao = new daoConstructor();
 }
 
 /*
@@ -45,21 +45,14 @@ ListController.prototype.parseAction = function parseAction(string) {
   };
 }
 
-// takes JSON data like [{"item": null}, {"item": null}, {"item": null}, etc.]
-ListController.prototype.toNumList = function toNumList(data) {
-  var text = "";
-  for (let step = 0; step < data.length; step++) {
-    text += `\n${step + 1}. ${data[step].item}`
-  }
-  return text;
-}
-
 // adds array list of items to the list
 ListController.prototype.listItems = function listItems() {
-  var db_resp = this.dao.listItems();
-  console.log("db_resp:")
-  return this.blockResp(this.toNumList(db_resp));
-  // self.response.send(self.blockResp(PostExecutor.toNumList(rows)));
+    sql = "SELECT * from List"
+    this.dao.all(sql).then((db_result) => {
+        console.log(db_result);
+        var formatted = resp_formats.numList(db_result);
+        this.response.send(formatted);
+    });
 }
 
 /*
@@ -93,21 +86,6 @@ ListController.prototype.formatResp = function formatResp(status, msg) {
   return { status: status, message: msg, action: this.action(), targets: this.targets};
 }
 
-// must deliver payload within 3000 ms to avoid client side (Slack app) timeout
-ListController.prototype.blockResp = function blockResp(text) {
-  return {
-    "blocks": [
-      {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": text
-        }
-      }
-    ]
-  };
-}
-
 /*
  * Misc Methods
  */
@@ -118,7 +96,7 @@ ListController.prototype.takeAction = function takeAction() {
     case '':
     case 'ls':
     case 'list':
-      return this.listItems();
+      this.listItems();
       break;
     case 'new':
     case 'create':
