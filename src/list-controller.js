@@ -1,12 +1,22 @@
 const daoConstructor = require("./dao.js");
-const resp_formats = require("./resp-formats.js");
+const rfConstructor = require("./response-formatter.js");
 const utils = require("./utils");
+const dbFileDefault = "/data/sqlite.db";
+const fs = require("fs");
 
 function ListController(raw_msg, response) {
     this.raw_msg = utils.cleanseString(raw_msg);
-    this.targets = [];
     this.response = response;
-    this.dao = new daoConstructor(process.env.DB_FILE);
+    this.rf = new rfConstructor()
+
+    // try to pull path to DB from env
+    var dbFile;
+    if (fs.existsSync(process.env.DB_FILE)) {
+        dbFile = process.env.DB_FILE;
+    } else {
+        dbFile = dbFileDefault;
+    }
+    this.dao = new daoConstructor(dbFile);
 }
 
 /*
@@ -15,7 +25,8 @@ function ListController(raw_msg, response) {
 
 // returns parsed request
 ListController.prototype.msg = function msg() {
-  return this.parseAction(this.raw_msg);
+    var msg = this.parseAction(this.raw_msg)
+    return msg;
 }
 
 // action getter
@@ -24,8 +35,8 @@ ListController.prototype.action = function action() {
 }
 
 // params getter
-ListController.prototype.params = function params() {
-  return this.msg().params;
+ListController.prototype.targets = function params() {
+  return this.msg().targets;
 }
 
 /*
@@ -41,49 +52,39 @@ ListController.prototype.parseAction = function parseAction(string) {
   // for now, static schema
   return {
     "action": l[0],
-    "params": l.slice(1)
+    "targets": l.slice(1),
+    "params": {}
   };
 }
 
 // adds array list of items to the list
+
+// returns list of
 ListController.prototype.listItems = function listItems() {
+    this.rf.setParam("format", "mdList");
     sql = "SELECT * from List"
     this.dao.all(sql).then((db_result) => {
         console.log(db_result);
-        var formatted = resp_formats.numList(db_result);
-        this.response.send(formatted);
+        this.rf.setData(db_result);
+        this.response.send(this.rf.getResponse());
     });
-}
-
-/*
- * Response macros
- */
-
-ListController.prototype.success = function success() {
-  return this.successResp();
-}
-
-ListController.prototype.error = function error(err) {
-  return this.errorResp(err);
 }
 
 /*
  * Response generators
  */
 
-// error response
-ListController.prototype.errorResp = function errorResp(err) {
-  return this.formatResp("error", err);
-}
-
-// successful response for single or multiple targets
-ListController.prototype.successResp = function successResp() {
-  return this.formatResp("success", `successful ${this.action()} on ${this.targets.join(", ")}`);
-}
-
 // generic generator
 ListController.prototype.formatResp = function formatResp(status, msg) {
   return { status: status, message: msg, action: this.action(), targets: this.targets};
+}
+
+ListController.prototype.success = function success() {
+  return this.formatResp("success", `successful ${this.action()} on ${this.targets.join(", ")}`);
+}
+
+ListController.prototype.error = function error(err) {
+  return this.formatResp("error", err);
 }
 
 /*
@@ -101,12 +102,12 @@ ListController.prototype.takeAction = function takeAction() {
     case 'new':
     case 'create':
     case 'add':
-      return this.addItems(this.params());
+      this.addItems(this.targets());
       break;
     case 'delete':
     case 'rm':
     case 'remove':
-      return this.removeItems(this.params());
+      return this.removeItems(this.targets());
       break;
     case 'nuke':
     case 'clear':
@@ -116,10 +117,9 @@ ListController.prototype.takeAction = function takeAction() {
       return this.success();
       break;
     default:
-      return this.errorResp(`${this.action()} is not a valid command`);
+      return this.error(`${this.action()} is not a valid command`);
       break;
   }
 }
 
-//
 module.exports = ListController;

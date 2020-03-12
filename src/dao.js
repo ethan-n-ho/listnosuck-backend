@@ -6,36 +6,37 @@ const Promise = require('bluebird')
 
 class AppDAO {
     constructor(dbFile) {
+        this.dbFile = dbFile;
         this.db_exists = fs.existsSync(dbFile);
         this.db = new sqlite3.Database(dbFile, (err) => {
             if (err) {
-                console.log('Could not connect to database', err)
+                console.log(`Could not connect to database at ${dbFile}`, err)
             } else {
-                console.log('Connected to database')
+                console.log(`Connected to database at ${dbFile}`)
             }
         });
         this.init();
     }
 }
 
-AppDAO.prototype.init = function init(dbFile) {
+AppDAO.prototype.init = function init(name = "List") {
     const db = this.db;
     db.serialize(() => {
         if (!this.db_exists) {
+            console.log(`Creating new table '${name}' at ${this.dbFile}`);
             db.run(
-                "CREATE TABLE List (id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT)"
+                `CREATE TABLE ${name} (id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT)`
             );
-            console.log("New table List created!");
 
             // insert default items
             db.serialize(() => {
                 db.run(
-                    'INSERT INTO List (item) VALUES ("first item"), ("milk"), ("third item")'
+                    `INSERT INTO ${name} (item) VALUES ("first item"), ("milk"), ("third item")`
                 );
             });
         } else {
-            console.log('Database "List" ready to go!');
-            db.each("SELECT * from List", (err, row) => {
+            console.log(`DB already exists at ${this.dbFile}`);
+            db.each(`SELECT * from ${name}`, (err, row) => {
                 if (row) {
                     console.log(`record: ${row.item}`);
                 }
