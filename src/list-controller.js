@@ -138,7 +138,7 @@ ListController.prototype.takeAction = function takeAction() {
       this.clearItems();
       break;
     case 'test':
-      this.success();
+      console.log(`Received action test`)
       break;
     default:
       return this.error(`${this.action()} is not a valid command`);
