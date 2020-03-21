@@ -59,3 +59,7 @@ node-hello: image | docker
 curl:
 	curl -X POST -H "Content-Type: application/json" \
 		-d '{"text": "test"}' http://localhost:3000/takeAction
+
+curl-prod:
+	curl -X POST -H "Content-Type: application/json" \
+		-d '{"text": "test"}' https://listnosuck-backend.glitch.me/takeAction
