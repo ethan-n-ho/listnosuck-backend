@@ -74,5 +74,25 @@ AppDAO.prototype.all = function(sql, params=[]) {
     });
 }
 
+AppDAO.prototype.clear = function() {
+    return new Promise((resolve, reject) => {
+        this.db.each("SELECT * from List", (err, row) => {
+            this.db.run(`DELETE FROM List WHERE ID=?`, row.id, error => {
+                if (row) {
+                    console.log(`deleted row ${row.id}`);
+                }
+            });
+        },
+        err => {
+            if (err) {
+                console.log(`Error running sql ${sql}`);
+                console.log(err);
+                reject(err);
+            } else {
+                resolve("success");
+            }
+        });
+    });
+}
 
 module.exports = AppDAO
