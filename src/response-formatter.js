@@ -59,14 +59,24 @@ ResponseFormatter.prototype.mdList = function(data) {
     return this.mdBlock(this.numList(data));
 }
 
+ResponseFormatter.prototype.success = function() {
+  var d = this.getData();
+  return {
+      status: "success", message: "success", action: d.action, targets: d.targets
+  };
+}
+
 ResponseFormatter.prototype.error = function(err) {
-    return JSON.stringify({ status: "error", message: err });
+  return { status: status, message: err };
 }
 
 ResponseFormatter.prototype.getResponse = function() {
     switch (this.params.format) {
       case 'mdList':
         return this.mdList(this.data);
+        break;
+      case 'success':
+        return this.success(this.data);
         break;
       default:
         return this.error(`${JSON.stringify(this.params.format)} is not a valid format`);
