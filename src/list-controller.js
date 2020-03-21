@@ -57,34 +57,58 @@ ListController.prototype.parseAction = function parseAction(string) {
   };
 }
 
-// adds array list of items to the list
-
-// returns list of
-ListController.prototype.listItems = function listItems() {
-    this.rf.setParam("format", "mdList");
-    sql = "SELECT * from List"
-    this.dao.all(sql).then((db_result) => {
+// adds items to the list
+ListController.prototype.addItems = function(items) {
+    this.rf.setParam("format", "success");
+    this.rf.setData({ action: this.action(), targets: this.targets() })
+    var mapped = items.map((item) => "(?)").join(",")
+    var sql = `INSERT INTO List (item) VALUES ` + mapped;
+    this.dao.run(sql, params=items).then((db_result) => {
         console.log(db_result);
         this.rf.setData(db_result);
         this.response.send(this.rf.getResponse());
     });
 }
 
-/*
- * Response generators
- */
-
-// generic generator
-ListController.prototype.formatResp = function formatResp(status, msg) {
-  return { status: status, message: msg, action: this.action(), targets: this.targets};
+// removes items from the list
+ListController.prototype.removeItems = function(items, sense_case = false) {
+    var filter;
+    this.rf.setParam("format", "success");
+    this.rf.setData({ action: this.action(), targets: this.targets() })
+    if (sense_case) {
+      filter = "TRIM(item) LIKE (?)";
+    } else {
+      filter = "TRIM(UPPER(item)) LIKE (?)";
+      items = items.map((item) => item.toUpperCase());
+    }
+    var mapped = items.map((item) => filter).join(" OR ")
+    var sql = `DELETE FROM List WHERE ` + mapped;
+    this.dao.run(sql, params=items).then((db_result) => {
+        console.log(db_result);
+        this.rf.setData(db_result);
+        this.response.send(this.rf.getResponse());
+    });
 }
 
-ListController.prototype.success = function success() {
-  return this.formatResp("success", `successful ${this.action()} on ${this.targets.join(", ")}`);
+// removes items from the list
+ListController.prototype.clearItems = function() {
+    this.rf.setParam("format", "success");
+    this.dao.clear().then((db_result) => {
+        console.log(db_result);
+        this.rf.setData({ status: db_result})
+        this.response.send(this.rf.getResponse());
+    });
 }
 
-ListController.prototype.error = function error(err) {
-  return this.formatResp("error", err);
+// returns items in list formatted as markdown response
+ListController.prototype.listItems = function() {
+    this.rf.setParam("format", "mdList");
+    var sql = "SELECT * from List"
+    this.dao.all(sql).then((db_result) => {
+        console.log(db_result);
+        this.rf.setData(db_result);
+        this.response.send(this.rf.getResponse());
+    });
 }
 
 /*
@@ -107,14 +131,14 @@ ListController.prototype.takeAction = function takeAction() {
     case 'delete':
     case 'rm':
     case 'remove':
-      return this.removeItems(this.targets());
+      this.removeItems(this.targets());
       break;
     case 'nuke':
     case 'clear':
-      return this.clearItems();
+      this.clearItems();
       break;
     case 'test':
-      return this.success();
+      this.success();
       break;
     default:
       return this.error(`${this.action()} is not a valid command`);
