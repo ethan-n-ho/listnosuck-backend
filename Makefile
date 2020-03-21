@@ -55,3 +55,7 @@ node: image | docker
 node-hello: image | docker
 	docker run --rm -it --init -p 3000:3000 \
 		--env-file $(DOT_ENV) $(IMAGE) node tests/hello.js
+
+curl:
+	curl -X POST -H "Content-Type: application/json" \
+		-d '{"text": "test"}' http://localhost:3000/takeAction
